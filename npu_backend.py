@@ -31,7 +31,11 @@ def probe():
         s=ort.InferenceSession(str(model_path),sess_options=so,providers=["VitisAIExecutionProvider","CPUExecutionProvider"])
         out=s.run(None,{"X":np.ones((1,64),np.float32)})[0]
         profile=s.end_profiling()
-        print(json.dumps({"providers":s.get_providers(),"selected":"VitisAIExecutionProvider" if "VitisAIExecutionProvider" in s.get_providers() else None,"output_checksum":float(out.sum()),"profile":profile},indent=2))
+        events=json.loads(Path(profile).read_text(errors="replace"))
+        vitis_events=[e for e in events if e.get("args",{}).get("provider")=="VitisAIExecutionProvider"]
+        if not vitis_events:
+            raise RuntimeError("VitisAIExecutionProvider was registered but no Vitis AI kernel event was profiled")
+        print(json.dumps({"providers":s.get_providers(),"selected":"VitisAIExecutionProvider" if "VitisAIExecutionProvider" in s.get_providers() else None,"vitis_kernel_events":len(vitis_events),"output_checksum":float(out.sum()),"profile":profile},indent=2))
 
 def main(argv=None):
     ap=argparse.ArgumentParser(prog="coli npu",description="AMD Ryzen AI NPU backend")
