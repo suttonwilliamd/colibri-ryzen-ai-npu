@@ -2123,6 +2123,14 @@ def cmd_mirror(a):
     return subprocess.call(command)
 
 
+def cmd_npu(a):
+    """Run the optional AMD Ryzen AI NPU bridge."""
+    root=os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if root not in sys.path:
+        sys.path.insert(0, root)
+    from npu_backend import main as npu_main
+    return npu_main([a.npu_cmd])
+
 def main():
     common=argparse.ArgumentParser(add_help=False)
     common.add_argument("--model", default=DEF_MODEL); common.add_argument("--ram", type=int, default=0)  # 0 = auto (il motore usa l'88% della RAM disponibile)
@@ -2247,6 +2255,8 @@ def main():
         _cache_root = os.environ.get("XDG_CACHE_HOME", os.path.expanduser("~/.cache"))
     _bench_cache = os.path.join(_cache_root, "colibri", "bench")
     pb.add_argument("--data",default=_bench_cache)
+    pnpu=sub.add_parser("npu", help="use the AMD Ryzen AI NPU backend")
+    pnpu.add_subparsers(dest="npu_cmd", required=True).add_parser("probe", help="execute a real MatMul through VitisAIExecutionProvider")
     pc=sub.add_parser("convert", parents=[common]); pc.add_argument("--repo",default="zai-org/GLM-5.2-FP8")
     # default=None e non il valore: cosi' e' argparse a dire se l'opzione e'
     # stata SCRITTA (--ebits 3, --ebits=3, o abbreviata), e cmd_convert puo'
@@ -2262,6 +2272,7 @@ def main():
     handler={"build":cmd_build,"info":cmd_info,"plan":cmd_plan,"mirror":cmd_mirror,
              "doctor":cmd_doctor,"tune":cmd_tune,
              "run":cmd_run,"chat":cmd_chat,"serve":cmd_serve,"stop":cmd_stop,"bench":cmd_bench,
+             "npu":cmd_npu,
              "convert":cmd_convert,"web":cmd_web}.get(a.cmd)
     if a.cmd=="cluster":
         if a.cluster_cmd=="coordinator": handler=cmd_cluster_coordinator
